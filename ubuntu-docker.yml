@@ -1,0 +1,80 @@
+---
+- hosts: all
+  become: false
+  gather_facts: true
+  vars:
+    NORMAL_USER_NAME: 'deploy'
+    ROOT_USER_NAME: 'itkroot'
+    MYSQL_HOST: '127.0.0.1'
+    MARIADB_VERSION: '10.11'
+    MAIL_TYPE: 'hetzner'
+    LOCAL_FQDN_NAME: '{{ inventory_hostname }}'
+    LOCAL_IP: '{{ ansible_default_ipv4.address }}'
+    LOCAL_HOSTNAME: '{{  inventory_hostname.split(".")[0] | lower }}'
+    DOCKER: true
+    ansible_python_interpreter: /usr/bin/python3
+
+  vars_prompt:
+    - name: 'MYSQL_ROOT_PASSWORD'
+      prompt: 'Database root password'
+      private: yes
+    - name: 'TRAEFIK_DASH_USER'
+      prompt: 'Dashboard username'
+      private: no
+    - name: 'TRAEFIK_DASH_PASSWD'
+      prompt: 'Dashboard password'
+      private: yes
+
+  pre_tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: true
+        update_cache: true
+      become: true
+
+    - name: Install python minimal
+      raw: test -e /usr/bin/python3 || (sudo apt -y update && sudo apt install -y python3-minimal)
+      become: true
+
+    - name: Install python3-apt
+      action: apt pkg=python3-apt state=present
+      become: true
+
+    - name: Default to python3
+      action: apt pkg=python-is-python3 state=present
+      become: true
+
+    - name: apt update
+      action: apt update_cache=yes
+      become: true
+
+    - name: apt upgrade
+      action: apt upgrade=yes
+      become: true
+
+    - name: Install acl
+      action: apt pkg=acl state=present
+      become: true
+
+    - name: Install net-tools
+      action: apt pkg=net-tools state=present
+      become: true
+
+  post_tasks:
+    # Tasks that should be run after roles.
+
+  roles:
+    # Setup users.
+    - users
+
+    # Installation tasks that all servers should use.
+    - common
+    - postfix
+
+    # Database on the host outside docker
+    - mariadb_client
+    - mariadb_server
+
+    # Install docker
+    - docker
+    - traefik

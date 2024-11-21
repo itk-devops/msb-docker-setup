@@ -1,0 +1,2 @@
+[docker]
+deploy-test.itkdev.dk ansible_user=root

@@ -1,0 +1,45 @@
+entryPoints:
+  web:
+    address: ":80"
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      # Test certs.
+      #caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      email: itkdev@mkb.aarhus.dk
+      storage: acme.json
+      httpChallenge:
+        # used during the challenge
+        entryPoint: web
+
+api: {}
+
+providers:
+  file:
+    directory: /data/config
+  docker:
+    endpoint: "tcp://socket-proxy:2375"
+    exposedByDefault: false
+    network: proxy
+
+log:
+  level: ERROR
+  filePath: /dev/stdout
+  format: json
+
+metrics:
+  prometheus:
+    addServicesLabels: true
+    addEntryPointsLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5

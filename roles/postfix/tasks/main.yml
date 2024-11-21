@@ -1,0 +1,107 @@
+---
+- name: Install postfix packages
+  apt:
+    pkg:
+      - mailutils
+      - postfix
+      - libsasl2-modules
+  become: true
+  tags:
+    - postfix
+
+- name: Set mail name
+  template: 
+    src: mailname.j2 
+    dest: /etc/mailname
+    owner: root
+    group: root 
+    mode: 0644
+  become: true
+  tags:
+    - postfix
+
+- name: Copy rsyslog mail template
+  copy:
+    src: 10-template.conf
+    dest: /etc/rsyslog.d
+    mode: 0644
+  become: true
+  notify:
+    - reload rsyslog
+  tags:
+    - postfix
+
+- name: Configure rsyslog to use template
+  replace:
+    dest=/etc/rsyslog.d/50-default.conf
+    regexp="{{ item.regexp }}"
+    replace="{{ item.replace }}"
+    backup=yes
+  with_items:
+    - { regexp: 'mail\.\*.+-/var/log/mail.log$', replace: 'mail.*                          -/var/log/mail.log;MailFormat' }
+  notify:
+    - reload rsyslog
+  become: true
+  tags:
+    - postfix
+
+- name: Creates ssl directory
+  file:
+    path: /etc/postfix/ssl
+    group: root
+    owner: root
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - postfix
+
+- name: Copy smtpd self singed cert (key)
+  shell:
+    cmd: openssl genrsa -out key.pem 4096
+    chdir: /etc/postfix/ssl
+  become: true
+  tags:
+    - postfix
+
+- name: Copy smtpd self singed cert (cert)
+  shell:
+    cmd: "openssl req -new -x509 -key key.pem -out cert.pem -days 3650 -subj=\"/C=DK/O=Aarhus/OU=DevOps/CN={{ LOCAL_FQDN_NAME }}/emailAddress=test@{{ LOCAL_FQDN_NAME }}\""
+    chdir: /etc/postfix/ssl
+  become: true
+  tags:
+    - postfix
+
+- name: Postfix configuration
+  template: 
+    src: main.cf.j2 
+    dest: /etc/postfix/main.cf
+    owner: root
+    mode: 0644
+  notify:
+    - reload postfix
+  become: true
+  tags:
+    - postfix
+
+- name: Rapid relay auth
+  template: 
+    src: rapid_sasl_passwd.j2
+    dest: /etc/postfix/sasl_passwd
+    owner: root
+    mode: 0644
+  notify:
+    - reload postfix
+  become: true
+  when: MAIL_TYPE == "rapid"
+  tags:
+    - postfix
+
+- name: Rapid relay auth
+  command: postmap /etc/postfix/sasl_passwd
+  notify:
+    - reload postfix
+  become: true
+  when: MAIL_TYPE == "rapid"
+  tags:
+    - postfix

@@ -1,0 +1,40 @@
+---
+networks:
+  frontend:
+    external: true
+  proxy:
+    driver: bridge
+    internal: true
+
+services:
+  socket-proxy:
+    image: itkdev/docker-socket-proxy
+    container_name: socket-proxy
+    user: root
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: 1
+    networks:
+      - proxy
+
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    restart: unless-stopped
+    depends_on:
+      - socket-proxy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+      - frontend
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /data/traefik/traefik.yaml:/traefik.yaml:ro
+      - /data/traefik/dynamic-conf.yaml:/data/config/dynamic-conf.yaml:ro
+      - /data/traefik/acme.json:/acme.json:rw
+      - /data/traefik/certs:/certs:ro

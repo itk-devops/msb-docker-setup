@@ -1,0 +1,8 @@
+---
+- name: reload postfix
+  become: true
+  service: name=postfix state=reloaded
+
+- name: reload rsyslog
+  become: true
+  service: name=rsyslog state=restarted

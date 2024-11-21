@@ -1,0 +1,149 @@
+---
+- name: Install
+  apt:
+    pkg:
+      - git
+      - locales-all
+      - bash-completion
+      - sudo
+      - nmap
+      - mc
+      - lynx
+      - zip
+      - build-essential
+      - automake
+      - autoconf
+      - rsync
+      - unzip
+      - git-core
+      - uptimed
+      - debconf-utils
+      - supervisor
+      - ntp
+      - htop
+      - ansible
+      - rsyslog
+      - cron
+      - nano
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - common
+
+- name: Configure timezone
+  copy: content=Europe/Copenhagen dest=/etc/timezone owner=root group=root mode=644 backup=yes
+  notify: update timezone
+  become: true
+  tags:
+    - common
+
+- name: Configure local timezone
+  file:
+    src: '/usr/share/zoneinfo/Europe/Copenhagen'
+    dest: '/etc/localtime'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    state: 'link'
+    force: true
+  notify: update timezone
+  become: true
+  tags:
+    - common
+
+- name: Add local en_GB
+  locale_gen: name=en_GB.UTF-8 state=present
+  become: true
+  tags:
+    - common
+
+- name: Add local en_DK
+  locale_gen: name=en_DK.UTF-8 state=present
+  become: true
+  tags:
+    - common
+
+- name: Add local da_DK
+  locale_gen: name=da_DK.UTF-8 state=present
+  become: true
+  tags:
+    - common
+
+- name: Add alises
+  lineinfile:
+    path: /etc/bash.bashrc
+    line: "alias ll='ls -l'"
+    state: present
+    insertafter: EOF
+    create: true
+    mode: 0644
+  become: true
+  tags:
+    - common
+
+- name: Added github to ssh known hosts (root)
+  lineinfile:
+    dest: /root/.ssh/known_hosts
+    create: true
+    state: present
+    line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+    regexp: "^github\\.com"
+    mode: 0600
+  become: true
+  tags:
+    - common
+
+- name: Added github to ssh known hosts (deploy)
+  lineinfile:
+    dest: /home/deploy/.ssh/known_hosts
+    create: true
+    group: "{{ NORMAL_USER_NAME }}"
+    owner: "{{ NORMAL_USER_NAME }}"
+    state: present
+    line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+    regexp: "^github\\.com"
+    mode: 0600
+  become: true
+  tags:
+    - common
+
+- name: Added server name to host file
+  lineinfile:
+    path: /etc/hosts
+    line: '127.0.0.1 {{ LOCAL_FQDN_NAME }} {{ LOCAL_HOSTNAME }}'
+  become: true
+  tags:
+    - common
+
+- name: Set hostnamect
+  command: hostnamectl set-hostname {{ LOCAL_FQDN_NAME }}
+  become: true
+  tags:
+    - common
+
+- name: Creates data directory
+  file:
+    path: /data/
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - common
+
+- name: Remove systemd-resolve link
+  file:
+    path: "/etc/resolv.conf"
+    state: absent
+  become: true
+  tags:
+    - common
+
+- name: Set correct systemd-resolve link
+  file:
+    src: "/run/systemd/resolve/resolv.conf"
+    dest: "/etc/resolv.conf"
+    state: link
+  become: true
+  tags:
+    - common

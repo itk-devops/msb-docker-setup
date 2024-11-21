@@ -1,0 +1,43 @@
+http:
+  routers:
+    api:
+      rule: Host(`{{ LOCAL_FQDN_NAME }}`)
+      entrypoints:
+        - websecure
+      service: api@internal
+      middlewares:
+        - myDashAuth
+      tls:
+        certResolver: letsencrypt
+
+    metrics:
+      rule: Host(`{{ LOCAL_FQDN_NAME }}`) && Path(`/metrics`)
+      entrypoints:
+        - websecure
+      service: prometheus@internal
+      middlewares:
+        - myDashAuth
+      tls:
+        certResolver: letsencrypt
+
+  middlewares:
+    myDashAuth:
+      basicAuth:
+        users:
+          - '{{ TRAFIK_DASH_HASH.stdout }}'
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+
+    mintls13:
+      minVersion: VersionTLS13
+
+# certificates:
+#   - certFile: /certs/wildcard.aarhus.dk.full.pem
+#     keyFile: /certs/wildcard.aarhus.dk.privkey.pem

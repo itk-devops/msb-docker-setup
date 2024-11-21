@@ -1,0 +1,10 @@
+---
+- name: Add NTP aarhuskommune
+  ansible.builtin.lineinfile:
+    path: /etc/ntp.conf
+    line: pool ntp.aarhuskommune.dk iburst
+    state: present
+  notify: reload ntp
+  become: true
+  tags:
+    - ntp

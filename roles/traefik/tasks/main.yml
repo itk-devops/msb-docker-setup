@@ -1,0 +1,127 @@
+---
+- name: Install required system packages
+  apt:
+    pkg:
+      - 'apache2-utils'
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - traefik
+
+- name: Creates www directory
+  file:
+    path: /data/www
+    group: deploy
+    owner: deploy
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - traefik
+
+- name: Create symbolic link (www)
+  file:
+    src: "/data/www"
+    dest: "/home/{{ NORMAL_USER_NAME }}/www"
+    state: link
+  become: true
+  tags:
+    - traefik
+
+- name: Creates traefik directory
+  file:
+    path: /data/traefik
+    group: root
+    owner: root
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - traefik
+
+- name: Creates traefik certs directory
+  file:
+    path: /data/traefik/certs
+    group: root
+    owner: root
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - traefik
+
+- name: Creates traefik letsencrypt certs directory
+  file:
+    path: /data/traefik/certs/letsencrypt
+    group: root
+    owner: root
+    state: directory
+    mode: 0755
+  become: true
+  tags:
+    - traefik
+
+- name: Creates acme json file
+  file:
+    path: /data/traefik/acme.json
+    group: root
+    owner: root
+    state: touch
+    mode: 0600
+  become: true
+  tags:
+    - traefik
+
+- name: Generate htpasswd for dashboard
+  shell:
+    cmd: "echo $(htpasswd -nb {{ TRAEFIK_DASH_USER }} {{ TRAEFIK_DASH_PASSWD }})"
+  register: TRAFIK_DASH_HASH
+  tags:
+    - traefik
+
+- name: Generate dynamic configuration
+  template: 
+    src: dynamic-conf.yaml.j2 
+    dest: /data/traefik/dynamic-conf.yaml
+    owner: root
+    mode: 0644
+  become: true
+  tags:
+    - traefik
+
+- name: Docker composer traefik config
+  copy:
+    src: docker-compose.yml
+    dest: /data/traefik/docker-compose.yml
+    mode: 0644
+    owner: root
+    force: true
+  become: true
+  tags:
+    - traefik
+
+- name: Copy traefik configuraion file
+  copy:
+    src: traefik.yaml
+    dest: /data/traefik/traefik.yaml
+    mode: 0644
+    owner: root
+    force: true
+  become: true
+  tags:
+    - traefik
+
+- name: Create frontend network
+  command: docker network create frontend
+  become: true
+  tags:
+    - traefik
+
+- name: Start traefik with docker-compose
+  command: docker compose up -d
+  args:
+    chdir: /data/traefik
+  become: true
+  tags:
+    - traefik

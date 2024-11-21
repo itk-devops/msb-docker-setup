@@ -1,0 +1,118 @@
+---
+- name: "Create non-root user"
+  user:
+    name: "{{ NORMAL_USER_NAME }}"
+    password: "{{ 'jpw_wfa-vej5AVH0uvd' | password_hash('sha512') }}"
+    shell: /bin/bash
+    uid: 1042
+  become: true
+  tags:
+    - users
+
+- name: "Disable information banner on SSH login"
+  file:
+    path: /home/{{ NORMAL_USER_NAME }}/.hushlogin
+    state: touch
+    owner: "{{ NORMAL_USER_NAME }}"
+    group: "{{ NORMAL_USER_NAME }}"
+    mode: 0400
+  become: true
+  tags:
+    - users
+
+- name: Added non-root user to www group
+  user: 
+    name: "{{ ROOT_USER_NAME }}"
+    groups: "www-data" 
+    append: yes
+  become: true
+  tags:
+    - users
+
+- name: Config sudo for non-root users
+  template: 
+    src: normal.j2
+    dest: "/etc/sudoers.d/{{ NORMAL_USER_NAME }}"
+    owner: root 
+    mode: 0640
+  become: true
+  tags:
+    - users
+
+- name: "Create a root user"
+  user:
+    name: "{{ ROOT_USER_NAME }}"
+    password: "{{ 'jpw_wfa-vej5AVH0uvd' | password_hash('sha512') }}"
+    shell: /bin/bash
+  become: true
+  tags:
+    - users
+
+- name: Added root user to sudoers
+  user:
+    name: "{{ ROOT_USER_NAME }}"
+    groups: sudo
+    append: true
+  become: true
+  tags:
+    - users
+
+- name: Allow root user to sudo
+  template:
+    src: root.j2
+    dest: "/etc/sudoers.d/{{ ROOT_USER_NAME }}"
+    owner: root
+    mode: 0640
+  become: true
+  tags:
+    - users
+
+- name: Creates directory (root user .ssh)
+  file:
+    path: "/home/{{ ROOT_USER_NAME }}/.ssh"
+    state: directory
+    owner: "{{ ROOT_USER_NAME }}"
+    group: "{{ ROOT_USER_NAME }}"
+    mode: 0750
+  become: true
+  tags:
+    - users
+
+- name: Add root user ssh keys
+  template:
+    src: authorized_keys.j2
+    dest: "/home/{{ ROOT_USER_NAME }}/.ssh/authorized_keys"
+    owner: "{{ ROOT_USER_NAME }}"
+    group: "{{ ROOT_USER_NAME }}"
+    mode: 0600
+  become: true
+  tags:
+    - users
+
+- name: Allow {{ NORMAL_USER_NAME }} to read logs (Groups - default)
+  acl:
+    name: "{{ item }}"
+    entity: "{{ NORMAL_USER_NAME }}"
+    etype: group
+    permissions: rx
+    default: true
+    recursive: true
+    state: present
+  with_items:
+    - /var/log
+  become: true
+  tags: users
+
+- name: Allow {{ NORMAL_USER_NAME }} to read logs (Groups)
+  acl:
+    name: "{{ item }}"
+    entity: "{{ NORMAL_USER_NAME }}"
+    etype: group
+    permissions: rx
+    default: false
+    recursive: true
+    state: present
+  with_items:
+    - /var/log
+  become: true
+  tags: users

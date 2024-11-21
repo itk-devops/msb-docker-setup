@@ -1,0 +1,11 @@
+# Service restart
+{{ NORMAL_USER_NAME }} ALL=NOPASSWD: /bin/systemctl, /usr/sbin/service, /usr/sbin/nginx
+
+# Certificates
+{{ NORMAL_USER_NAME }} ALL=NOPASSWD: /usr/bin/certbot
+
+# File permission changes
+{{ NORMAL_USER_NAME }} ALL=NOPASSWD: /bin/chown, /bin/chmod, /usr/bin/setfacl, /usr/bin/getfacl
+
+# Allow supervisor ctl access
+{{ NORMAL_USER_NAME }} ALL=NOPASSWD: /usr/bin/supervisorctl

@@ -1,0 +1,49 @@
+---
+- hosts: all
+  become: false
+  gather_facts: true
+  vars:
+    NORMAL_USER_NAME: 'deploy'
+    ROOT_USER_NAME: 'itkroot'
+    MAIL_TYPE: 'internal'
+    ansible_python_interpreter: /usr/bin/python3
+
+  vars_prompt:
+    - name: 'LOCAL_HOSTNAME'
+      prompt: 'Local hostname'
+      private: no
+    - name: 'LOCAL_FQDN_NAME'
+      prompt: 'FQDN'
+      private: no
+
+  pre_tasks:
+    - name: Install python minimal
+      raw: test -e /usr/bin/python3 || (sudo apt -y update && sudo apt install -y python-minimal)
+
+    - name: Check that the server's alive
+      action: ping
+
+    - name: Install python-apt
+      action: apt pkg=python-apt state=present
+
+    - name: Default to python3
+      action: apt pkg=python-is-python3 state=present
+
+    - name: apt update
+      action: apt update_cache=yes
+
+    - name: apt upgrade
+      action: apt upgrade=yes
+
+    - name: Install acl
+      action: apt pkg=acl state=present
+
+  post_tasks:
+    # Tasks that should be run after roles.
+
+  roles:
+    - users
+    - common
+    - postfix
+    - ntp_aak
+    

@@ -1,0 +1,89 @@
+---
+- name: Add repository key to the system
+  apt_key:
+    url: https://mariadb.org/mariadb_release_signing_key.asc
+    state: present
+  become: true
+  tags:
+    - mariadb-client
+
+- name: Check if mariadb repository exists
+  stat: 
+    path: /etc/apt/sources.list.d/mariadb.list
+  register: mariadb_added
+  become: true
+  tags:
+    - mariadb-client
+
+# https://downloads.mariadb.com/MariaDB/mariadb_repo_setup
+- name: Get install script
+  copy:
+    src: mariadb_repo_setup
+    dest: /tmp/mariadb_repo_setup
+    mode: 0775
+    owner: root
+    group: root
+  become: true
+  when: mariadb_added.stat.exists == false
+  tags:
+    - mariadb-client
+
+- name: Install repository
+  shell: /tmp/mariadb_repo_setup --mariadb-server-version=mariadb-{{ MARIADB_VERSION }}
+  become: true
+  when: mariadb_added.stat.exists == false
+  tags:
+    - mariadb-client
+
+- name: Install
+  apt:
+    pkg: mariadb-client
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - mariadb-client
+
+- name: Install python-mysqldb
+  apt:
+    pkg: python3-mysqldb
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - mariadb-client
+
+- name: Copy .my.cnf file with root password credentials - root
+  template:
+    src: root.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    mode: 0600
+  when: MYSQL_ROOT_PASSWORD is defined
+  become: true
+  tags:
+    - mariadb-client
+
+- name: Copy .my.cnf file with root password credentials - {{ NORMAL_USER_NAME }}
+  template:
+    src: root.cnf.j2
+    dest: "/home/{{ NORMAL_USER_NAME }}/.my.cnf"
+    owner: root
+    group: root
+    mode: 0600
+  when: MYSQL_ROOT_PASSWORD is defined
+  become: true
+  tags:
+    - mariadb-client
+
+- name: Copy .my.cnf file with root password credentials - {{ NORMAL_USER_NAME }}
+  template:
+    src: root.cnf.j2
+    dest: "/home/{{ NORMAL_USER_NAME }}/.my.cnf"
+    owner: "{{ NORMAL_USER_NAME }}"
+    group: "{{ NORMAL_USER_NAME }}"
+    mode: 0600
+  when: MYSQL_ROOT_PASSWORD is defined
+  become: true
+  tags:
+    - mariadb-client
