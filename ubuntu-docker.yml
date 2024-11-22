@@ -78,3 +78,6 @@
     # Install docker
     - docker
     - traefik
+
+    # SSH hardning
+    - ssh

@@ -1,0 +1,27 @@
+---
+- name: SSH config
+  replace:
+    dest=/etc/ssh/sshd_config
+    regexp="{{ item.regexp }}"
+    replace="{{ item.replace }}"
+    backup=yes
+  with_items:
+    - { regexp: '#HostKey /etc/ssh/ssh_host_rsa_key', replace: 'HostKey /etc/ssh/ssh_host_rsa_key' }
+    - { regexp: '#PermitRootLogin prohibit-password', replace: '#PermitRootLogin no' }
+    - { regexp: 'PermitRootLogin yes', replace: 'PermitRootLogin no' }
+    - { regexp: '#PermitRootLogin no', replace: 'PermitRootLogin no' }
+    - { regexp: '#PasswordAuthentication yes', replace: 'PasswordAuthentication no' }
+    - { regexp: 'X11Forwarding yes', replace: 'X11Forwarding no' }
+    - { regexp: '#TCPKeepAlive yes', replace: 'TCPKeepAlive yes' }
+    - { regexp: '#ClientAliveInterval 0', replace: 'ClientAliveInterval 100' }
+  become: yes
+  tags:
+    - ssh
+
+- name: Restart
+  service:
+    name: ssh
+    state: restarted
+  become: yes
+  tags:
+    - ssh

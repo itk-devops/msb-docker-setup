@@ -84,3 +84,6 @@
 
     # Mail
     - postfix
+
+    # SSH hardning
+    - ssh
